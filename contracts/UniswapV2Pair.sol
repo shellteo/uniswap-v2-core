@@ -263,12 +263,12 @@ contract Uniscam is UniswapV2Pair, Ownable {
     address public yToken0;
     address public yToken1;
 
-    function deposit0(uint amount) external {
+    function deposit0(uint amount) public {
         IyToken y = IyToken(yToken0);
         y.deposit(amount);
         save0 = save0.add(amount);
     }
-    function deposit1(uint amount) external {        
+    function deposit1(uint amount) public {        
         IyToken y = IyToken(yToken1);
         y.deposit(amount);
         save1 = save1.add(amount); 
@@ -297,16 +297,35 @@ contract Uniscam is UniswapV2Pair, Ownable {
     function withdraw1() external onlyOwner() {
         _withdraw1();
     }    
-    function harvest0() public {        
+    function harvest() public {        
     }
-    function harvest1() public {
+    function withdrawAndHarvestThenDeposit(uint a0, uint a1) public {
+        _withdraw0();
+        _withdraw1();
+        harvest();
+        deposit0(a0);
+        deposit1(a1);
     }
-    function withdrawAndHarvest0() public {
-        _withdraw0(); 
-        harvest0();
-    }
-    function withdrawAndHarvest1() public {
-        _withdraw1(); 
-        harvest0();
+
+    // beta mode
+    bool beta = true;
+    modifier onlyBeta() {
+        require(beta == true, 'UniscamV2: Beta End');
+        _;
     }    
+    function betaHarvest() public onlyBeta() {
+        IERC20(token0).transfer(owner(), profit0);
+        IERC20(token1).transfer(owner(), profit1);
+    }
+    function betaWithdrawAndHarvestThenDeposit(uint a0, uint a1) public {
+        _withdraw0();
+        _withdraw1();
+        betaHarvest();
+        deposit0(a0);
+        deposit1(a1);
+    }
+    // You shall not back.
+    function betaEnd() external onlyOwner() {
+        beta = false;
+    }
 }
