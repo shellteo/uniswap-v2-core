@@ -22,3 +22,6 @@ The following assumes the use of `node@>=10`.
 ## Run Tests
 
 `yarn test`
+
+## factory contract address 
+- rinkeby: 0x48AC9a797CE0c48d3E0B8df7e9eb013Fe66998B6
