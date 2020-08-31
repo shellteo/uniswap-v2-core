@@ -271,47 +271,35 @@ contract UnisavePair is UniswapV2Pair, Ownable {
         y.deposit(amount);
         save1 = save1.add(amount); 
     }
-    function _withdraw0(uint share) internal {
+    function _withdraw0() internal {
         address _token0 = token0; // gas savings
         IyToken y = IyToken(yToken0);
         uint delta = IERC20(_token0).balanceOf(address(this));
-        y.withdraw(share);
+        y.withdraw(y.balanceOf(address(this)));
         delta = IERC20(_token0).balanceOf(address(this)).sub(delta);
         save0 = 0;
     }
-    function _withdraw1(uint share) internal {
+    function _withdraw1() internal {
         address _token1 = token1; // gas savings        
         IyToken y = IyToken(yToken1);
         uint delta = IERC20(_token1).balanceOf(address(this));
-        y.withdraw(share);
+        y.withdraw(y.balanceOf(address(this)));
         delta = IERC20(_token1).balanceOf(address(this)).sub(delta);
         save1 = 0;
     }
-    function _withdraw0All() internal {
-        _withdraw0(IyToken(yToken0).balanceOf(address(this)));
+    function withdraw0() external onlyOwner() {
+        _withdraw0();
     }
-    function _withdraw1All() internal {
-        _withdraw1(IyToken(yToken1).balanceOf(address(this)));
-    }
-    function withdraw0(uint share) external onlyOwner() {
-        _withdraw0(share);
-    }
-    function withdraw1(uint share) external onlyOwner() {
-        _withdraw1(share);
-    }
-    function withdraw0All() external onlyOwner() {
-        _withdraw0All();
-    }
-    function withdraw1All() external onlyOwner() {
-        _withdraw1All();
+    function withdraw1() external onlyOwner() {
+        _withdraw1();
     }
     // Dangerous if yToken hacked.
     function switch0(address new_yToken0) external onlyOwner() {
-        if (yToken0 != address(0)) _withdraw0All();
+        if (yToken0 != address(0)) _withdraw0();
         yToken0 = new_yToken0;
     }
     function switch1(address new_yToken1) external onlyOwner() {
-        if (yToken1 != address(0)) _withdraw1All();
+        if (yToken1 != address(0)) _withdraw1();
         yToken1 = new_yToken1;
     }
 }
