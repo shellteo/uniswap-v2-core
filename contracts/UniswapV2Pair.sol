@@ -20,8 +20,6 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     address public token1;
     uint public save0;
     uint public save1;
-    uint public profit0;
-    uint public profit1;    
 
     uint112 private reserve0;           // uses single storage slot, accessible via getReserves
     uint112 private reserve1;           // uses single storage slot, accessible via getReserves
@@ -203,10 +201,10 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
 
     // Uniscam
     function b0() public view returns (uint real_balance) {
-        real_balance = IERC20(token0).balanceOf(address(this)).add(save0).sub(profit0);
+        real_balance = IERC20(token0).balanceOf(address(this)).add(save0);
     }
     function b1() public view returns (uint real_balance) {
-        real_balance = IERC20(token1).balanceOf(address(this)).add(save1).sub(profit1);
+        real_balance = IERC20(token1).balanceOf(address(this)).add(save1);
     }
 }
 
@@ -273,59 +271,26 @@ contract Uniscam is UniswapV2Pair, Ownable {
         y.deposit(amount);
         save1 = save1.add(amount); 
     }
-    function _withdraw0() internal {
+    function _withdraw0(uint share) internal {
         address _token0 = token0; // gas savings
         IyToken y = IyToken(yToken0);
         uint delta = IERC20(_token0).balanceOf(address(this));
-        y.withdraw(y.balanceOf(address(this)));
+        y.withdraw(share);
         delta = IERC20(_token0).balanceOf(address(this)).sub(delta);
-        profit0 += delta - save0;
         save0 = 0;
     }
-    function _withdraw1() internal {
+    function _withdraw1(uint share) internal {
         address _token1 = token1; // gas savings        
         IyToken y = IyToken(yToken1);
         uint delta = IERC20(_token1).balanceOf(address(this));
-        y.withdraw(y.balanceOf(address(this)));
+        y.withdraw(share);
         delta = IERC20(_token1).balanceOf(address(this)).sub(delta);
-        profit1 += delta - save1;
         save1 = 0;
     }
-    function withdraw0() external onlyOwner() {
-        _withdraw0();
+    function withdraw0(uint share) external onlyOwner() {
+        _withdraw0(share);
     }
-    function withdraw1() external onlyOwner() {
-        _withdraw1();
-    }    
-    function harvest() public {        
-    }
-    function withdrawAndHarvestThenDeposit(uint a0, uint a1) public {
-        _withdraw0();
-        _withdraw1();
-        harvest();
-        deposit0(a0);
-        deposit1(a1);
-    }
-
-    // beta mode
-    bool beta = true;
-    modifier onlyBeta() {
-        require(beta == true, 'UniscamV2: Beta End');
-        _;
-    }    
-    function betaHarvest() public onlyBeta() {
-        IERC20(token0).transfer(owner(), profit0);
-        IERC20(token1).transfer(owner(), profit1);
-    }
-    function betaWithdrawAndHarvestThenDeposit(uint a0, uint a1) public {
-        _withdraw0();
-        _withdraw1();
-        betaHarvest();
-        deposit0(a0);
-        deposit1(a1);
-    }
-    // You shall not back.
-    function betaEnd() external onlyOwner() {
-        beta = false;
+    function withdraw1(uint share) external onlyOwner() {
+        _withdraw1(share);
     }
 }
