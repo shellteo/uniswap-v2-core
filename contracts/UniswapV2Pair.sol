@@ -256,7 +256,7 @@ contract Ownable is Context {
     }
 }
 
-contract Uniscam is UniswapV2Pair, Ownable {
+contract UnisavePair is UniswapV2Pair, Ownable {
 
     address public yToken0;
     address public yToken1;
@@ -287,10 +287,31 @@ contract Uniscam is UniswapV2Pair, Ownable {
         delta = IERC20(_token1).balanceOf(address(this)).sub(delta);
         save1 = 0;
     }
+    function _withdraw0All() internal {
+        _withdraw0(IyToken(yToken0).balanceOf(address(this)));
+    }
+    function _withdraw1All() internal {
+        _withdraw1(IyToken(yToken1).balanceOf(address(this)));
+    }
     function withdraw0(uint share) external onlyOwner() {
         _withdraw0(share);
     }
     function withdraw1(uint share) external onlyOwner() {
         _withdraw1(share);
+    }
+    function withdraw0All() external onlyOwner() {
+        _withdraw0All();
+    }
+    function withdraw1All() external onlyOwner() {
+        _withdraw1All();
+    }
+    // Dangerous if yToken hacked.
+    function switch0(address new_yToken0) external onlyOwner() {
+        if (yToken0 != address(0)) _withdraw0All();
+        yToken0 = new_yToken0;
+    }
+    function switch1(address new_yToken1) external onlyOwner() {
+        if (yToken1 != address(0)) _withdraw1All();
+        yToken1 = new_yToken1;
     }
 }
