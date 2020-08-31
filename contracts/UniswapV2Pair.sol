@@ -2,14 +2,13 @@ pragma solidity =0.5.16;
 
 import './interfaces/IUniswapV2Pair.sol';
 import './UniswapV2ERC20.sol';
-import './yCrvDeposit.sol';
 import './libraries/Math.sol';
 import './libraries/UQ112x112.sol';
 import './interfaces/IERC20.sol';
 import './interfaces/IUniswapV2Factory.sol';
 import './interfaces/IUniswapV2Callee.sol';
 
-contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20, yCrvDeposit {
+contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     using SafeMath  for uint;
     using UQ112x112 for uint224;
 
@@ -34,17 +33,6 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20, yCrvDeposit {
         unlocked = 0;
         _;
         unlocked = 1;
-    }
-
-    function trueBalanceOf(address token, address _address) public view returns (uint balance) {
-        uint b1 = IERC20(token).balanceOf(_address);
-        // if token address equal to ycrv
-        if (token == yCrv_address) {
-            uint b2 = yBalanceOf(_address);
-            balance = b1.add(b2); 
-        } else {
-            balance = b1;
-        }
     }
 
     function getReserves() public view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast) {
@@ -121,13 +109,10 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20, yCrvDeposit {
     // this low-level function should be called from a contract which performs important safety checks
     function mint(address to) external lock returns (uint liquidity) {
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
-        uint balance0 = trueBalanceOf(token0, address(this)); // get true balance
-        uint balance1 = trueBalanceOf(token1, address(this)); // get true balance
+        uint balance0 = IERC20(token0).balanceOf(address(this));
+        uint balance1 = IERC20(token1).balanceOf(address(this));
         uint amount0 = balance0.sub(_reserve0);
         uint amount1 = balance1.sub(_reserve1);
-
-        if (token0 == yCrv_address) deposit(amount0); // deposit
-        if (token1 == yCrv_address) deposit(amount1); // deposit
 
         bool feeOn = _mintFee(_reserve0, _reserve1);
         uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
@@ -150,25 +135,20 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20, yCrvDeposit {
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
         address _token0 = token0;                                // gas savings
         address _token1 = token1;                                // gas savings
-        uint balance0 = trueBalanceOf(_token0, address(this)); // get true balance
-        uint balance1 = trueBalanceOf(_token1, address(this)); // get true balance
+        uint balance0 = IERC20(_token0).balanceOf(address(this));
+        uint balance1 = IERC20(_token1).balanceOf(address(this));
         uint liquidity = balanceOf[address(this)];
-        
 
         bool feeOn = _mintFee(_reserve0, _reserve1);
         uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
         amount0 = liquidity.mul(balance0) / _totalSupply; // using balances ensures pro-rata distribution
         amount1 = liquidity.mul(balance1) / _totalSupply; // using balances ensures pro-rata distribution
-
-        if (_token0 == yCrv_address) withdraw(amount0); // withdraw
-        if (_token1 == yCrv_address) withdraw(amount1); // withdraw
-
         require(amount0 > 0 && amount1 > 0, 'UniswapV2: INSUFFICIENT_LIQUIDITY_BURNED');
         _burn(address(this), liquidity);
         _safeTransfer(_token0, to, amount0);
         _safeTransfer(_token1, to, amount1);
-        balance0 = trueBalanceOf(_token0, address(this));
-        balance1 = trueBalanceOf(_token1, address(this));
+        balance0 = IERC20(_token0).balanceOf(address(this));
+        balance1 = IERC20(_token1).balanceOf(address(this));
 
         _update(balance0, balance1, _reserve0, _reserve1);
         if (feeOn) kLast = uint(reserve0).mul(reserve1); // reserve0 and reserve1 are up-to-date
@@ -187,14 +167,9 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20, yCrvDeposit {
         address _token0 = token0;
         address _token1 = token1;
         require(to != _token0 && to != _token1, 'UniswapV2: INVALID_TO');
-
-        if (amount0Out > 0 && _token0 == yCrv_address) withdraw(amount0Out); // withdraw
-        if (amount1Out > 0 && _token1 == yCrv_address) withdraw(amount1Out); // withdraw
-
         if (amount0Out > 0) _safeTransfer(_token0, to, amount0Out); // optimistically transfer tokens
         if (amount1Out > 0) _safeTransfer(_token1, to, amount1Out); // optimistically transfer tokens
         if (data.length > 0) IUniswapV2Callee(to).uniswapV2Call(msg.sender, amount0Out, amount1Out, data);
-        // Todo, need to deposit y token
         balance0 = IERC20(_token0).balanceOf(address(this));
         balance1 = IERC20(_token1).balanceOf(address(this));
         }
