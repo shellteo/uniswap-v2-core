@@ -5,8 +5,8 @@ import './libraries/SafeMath.sol';
 
 contract yCrvDeposit {
     using SafeMath for uint;
-    address constant public crv_deposit = address(0xFA712EE4788C042e2B7BB55E6cb8ec569C4530c1);
-    address constant public yCrv_address = address(0xdF5e0e81Dff6FAF3A7e52BA697820c5e32D806A8);
+    address constant public crv_deposit = address(0x5c4bA89613b0CE11Ff2FaeF40b3C529B9a162465);
+    address constant public yCrv_address = address(0x7f76315337E63482043F92A1bD4784290159AD6f);
     IERC20 constant public yCrv = IERC20(yCrv_address);
 
     function deposit(uint256 _amount) internal {
@@ -21,7 +21,7 @@ contract yCrvDeposit {
     function rebalance(uint16 ratio) external {
         require(ratio <= 1000, "ratio too large");
         uint a = yCrv.balanceOf(address(this));
-        uint b = ICrvDeposit(crv_deposit).balanceOf(address(this));
+        uint b = yBalanceOf(address(this));
         uint t = a.add(b);
         t = t.mul(ratio).div(1000);
         if (t > b) deposit(t-b);
