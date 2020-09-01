@@ -8,7 +8,56 @@ import './interfaces/IERC20.sol';
 import './interfaces/IUniswapV2Factory.sol';
 import './interfaces/IUniswapV2Callee.sol';
 
-contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
+
+import './interfaces/IyToken.sol';
+
+contract Context {
+    constructor () internal { }
+    // solhint-disable-previous-line no-empty-blocks
+
+    function _msgSender() internal view returns (address payable) {
+        return msg.sender;
+    }
+
+    function _msgData() internal view returns (bytes memory) {
+        this; // silence state mutability warning without generating bytecode - see https://github.com/ethereum/solidity/issues/2691
+        return msg.data;
+    }
+}
+
+contract Ownable is Context {
+    address private _owner;
+
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    constructor () internal {
+        _owner = _msgSender();
+        emit OwnershipTransferred(address(0), _owner);
+    }
+    function owner() public view returns (address) {
+        return _owner;
+    }
+    modifier onlyOwner() {
+        require(isOwner(), "Ownable: caller is not the owner");
+        _;
+    }
+    function isOwner() public view returns (bool) {
+        return _msgSender() == _owner;
+    }
+    function renounceOwnership() public onlyOwner {
+        emit OwnershipTransferred(_owner, address(0));
+        _owner = address(0);
+    }
+    function transferOwnership(address newOwner) public onlyOwner {
+        _transferOwnership(newOwner);
+    }
+    function _transferOwnership(address newOwner) internal {
+        require(newOwner != address(0), "Ownable: new owner is the zero address");
+        emit OwnershipTransferred(_owner, newOwner);
+        _owner = newOwner;
+    }
+}
+
+contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20, Ownable {
     using SafeMath  for uint;
     using UQ112x112 for uint224;
 
@@ -18,6 +67,8 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     address public factory;
     address public token0;
     address public token1;
+    address public yToken0;
+    address public yToken1;
     uint public save0;
     uint public save1;
 
@@ -206,60 +257,6 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     function b1() public view returns (uint real_balance) {
         real_balance = IERC20(token1).balanceOf(address(this)).add(save1);
     }
-}
-
-import './interfaces/IyToken.sol';
-
-contract Context {
-    constructor () internal { }
-    // solhint-disable-previous-line no-empty-blocks
-
-    function _msgSender() internal view returns (address payable) {
-        return msg.sender;
-    }
-
-    function _msgData() internal view returns (bytes memory) {
-        this; // silence state mutability warning without generating bytecode - see https://github.com/ethereum/solidity/issues/2691
-        return msg.data;
-    }
-}
-
-contract Ownable is Context {
-    address private _owner;
-
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-    constructor () internal {
-        _owner = _msgSender();
-        emit OwnershipTransferred(address(0), _owner);
-    }
-    function owner() public view returns (address) {
-        return _owner;
-    }
-    modifier onlyOwner() {
-        require(isOwner(), "Ownable: caller is not the owner");
-        _;
-    }
-    function isOwner() public view returns (bool) {
-        return _msgSender() == _owner;
-    }
-    function renounceOwnership() public onlyOwner {
-        emit OwnershipTransferred(_owner, address(0));
-        _owner = address(0);
-    }
-    function transferOwnership(address newOwner) public onlyOwner {
-        _transferOwnership(newOwner);
-    }
-    function _transferOwnership(address newOwner) internal {
-        require(newOwner != address(0), "Ownable: new owner is the zero address");
-        emit OwnershipTransferred(_owner, newOwner);
-        _owner = newOwner;
-    }
-}
-
-contract UnisavePair is UniswapV2Pair, Ownable {
-
-    address public yToken0;
-    address public yToken1;
 
     function deposit0(uint amount) public {
         IyToken y = IyToken(yToken0);
@@ -301,5 +298,5 @@ contract UnisavePair is UniswapV2Pair, Ownable {
     function switch1(address new_yToken1) external onlyOwner() {
         if (yToken1 != address(0)) _withdraw1();
         yToken1 = new_yToken1;
-    }
+    }    
 }
