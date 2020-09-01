@@ -98,6 +98,18 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20, Ownable {
         (bool success, bytes memory data) = token.call(abi.encodeWithSelector(SELECTOR, to, value));
         require(success && (data.length == 0 || abi.decode(data, (bool))), 'UniswapV2: TRANSFER_FAILED');
     }
+    function _safeTransfer0(address to, uint value) private {
+        if (value > IERC20(token0).balanceOf(address(this))) {
+            _withdraw0();
+        }        
+        _safeTransfer(token0, to, value);
+    }    
+    function _safeTransfer1(address to, uint value) private {
+        if (value > IERC20(token1).balanceOf(address(this))) {
+            _withdraw1();
+        }
+        _safeTransfer(token1, to, value);
+    }        
 
     event Mint(address indexed sender, uint amount0, uint amount1);
     event Burn(address indexed sender, uint amount0, uint amount1, address indexed to);
@@ -186,8 +198,6 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20, Ownable {
     // this low-level function should be called from a contract which performs important safety checks
     function burn(address to) external lock returns (uint amount0, uint amount1) {
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
-        address _token0 = token0;                                // gas savings
-        address _token1 = token1;                                // gas savings
         uint balance0 = b0();
         uint balance1 = b1();
         uint liquidity = balanceOf[address(this)];
@@ -198,8 +208,8 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20, Ownable {
         amount1 = liquidity.mul(balance1) / _totalSupply; // using balances ensures pro-rata distribution
         require(amount0 > 0 && amount1 > 0, 'UniswapV2: INSUFFICIENT_LIQUIDITY_BURNED');
         _burn(address(this), liquidity);
-        _safeTransfer(_token0, to, amount0);
-        _safeTransfer(_token1, to, amount1);
+        _safeTransfer0(to, amount0);
+        _safeTransfer1(to, amount1);
         balance0 = b0();
         balance1 = b1();
 
@@ -220,8 +230,8 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20, Ownable {
         address _token0 = token0;
         address _token1 = token1;
         require(to != _token0 && to != _token1, 'UniswapV2: INVALID_TO');
-        if (amount0Out > 0) _safeTransfer(_token0, to, amount0Out); // optimistically transfer tokens
-        if (amount1Out > 0) _safeTransfer(_token1, to, amount1Out); // optimistically transfer tokens
+        if (amount0Out > 0) _safeTransfer0(to, amount0Out); // optimistically transfer tokens
+        if (amount1Out > 0) _safeTransfer1(to, amount1Out); // optimistically transfer tokens
         if (data.length > 0) IUniswapV2Callee(to).uniswapV2Call(msg.sender, amount0Out, amount1Out, data);
         balance0 = b0();
         balance1 = b1();
@@ -241,8 +251,8 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20, Ownable {
 
     // force balances to match reserves
     function skim(address to) external lock {
-        _safeTransfer(token0, to, b0().sub(reserve0));
-        _safeTransfer(token1, to, b1().sub(reserve1));
+        _safeTransfer0(to, b0().sub(reserve0));
+        _safeTransfer1(to, b1().sub(reserve1));
     }
 
     // force reserves to match balances
